@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 st.title("⚾ Pitcher Velocity Dashboard")
 
-# inputs (name, pitches)
+# user inputs
 player_name = st.text_input("Enter Pitcher Name", "Gerrit Cole")
 
 col1, col2 = st.columns(2)
@@ -14,8 +14,7 @@ with col1:
 with col2:
     end_date = st.date_input("End Date", pd.to_datetime("2024-09-30"))
 
-
-# convert pitch abbreviations to real pitches
+# pitch name mapping
 pitch_name_map = {
     "FF": "Four-Seam Fastball",
     "SI": "Sinker",
@@ -32,12 +31,14 @@ pitch_name_map = {
 }
 
 
-pitch_types = st.multiselect(
+pitch_code_map = {v: k for k, v in pitch_name_map.items()}
+
+# create dropdown with pitch names
+selected_pitches = st.multiselect(
     "Select Pitch Types",
-    ["Four-Seam Fastball", "Sinker", "Slider", "Changeup", "Curveball", "Cutter", "Knuckle Curve", "Splitter"],
+    list(pitch_name_map.values()),
     default=["Four-Seam Fastball", "Slider"]
 )
-
 
 # get pitcher data
 def get_pitcher_data(player_name, start_date, end_date):
@@ -48,7 +49,7 @@ def get_pitcher_data(player_name, start_date, end_date):
     data = statcast_pitcher(str(start_date), str(end_date), player_id)
     return data, player_id
 
-# generate dashboard
+# create dashboard
 if st.button("Generate Dashboard"):
 
     pitcher_df, player_id = get_pitcher_data(player_name, start_date, end_date)
@@ -64,11 +65,12 @@ if st.button("Generate Dashboard"):
 
         fig, ax = plt.subplots(figsize=(12,6))
 
-        for pitch_code in pitch_types:
+        for pitch_full_name in selected_pitches:
+            pitch_code = pitch_code_map[pitch_full_name]  # Convert full name → Statcast code
             pitch_df = pitcher_df[pitcher_df["pitch_type"] == pitch_code].copy()
 
             if pitch_df.empty:
-                st.warning(f"No data for {pitch_name_map.get(pitch_code, pitch_code)}")
+                st.warning(f"No data for {pitch_full_name}")
                 continue
 
             pitch_df = pitch_df.rename(columns={"release_speed": "velo"})
@@ -81,10 +83,10 @@ if st.button("Generate Dashboard"):
             # merge with full date range for consistent x-axis
             game_avg = pd.merge(full_df, game_avg, on="game_date", how="left")
 
-            # skip missing values
+            # fix missing values
             game_avg["velo_interp"] = game_avg["velo"].interpolate()
 
-            # create rolling average
+            # rolling average (5 games)
             game_avg["velo_rolling"] = game_avg["velo_interp"].rolling(5, min_periods=1).mean()
 
             # plot raw velocity (dashed, transparent)
@@ -99,7 +101,7 @@ if st.button("Generate Dashboard"):
             ax.plot(
                 game_avg["game_date"],
                 game_avg["velo_rolling"],
-                label=pitch_name_map.get(pitch_code, pitch_code)
+                label=pitch_full_name
             )
 
         ax.set_title(f"{player_name} Velocity Trends")
