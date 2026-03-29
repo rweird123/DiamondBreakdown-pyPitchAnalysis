@@ -14,11 +14,6 @@ with col1:
 with col2:
     end_date = st.date_input("End Date", pd.to_datetime("2024-09-30"))
 
-pitch_types = st.multiselect(
-    "Select Pitch Types",
-    ["FF", "SI", "SL", "CH", "CU", "FC"],
-    default=["FF", "SL"]
-)
 
 # convert pitch abbreviations to real pitches
 pitch_name_map = {
@@ -35,6 +30,14 @@ pitch_name_map = {
     "KN": "Knuckleball",
     "SC": "Screwball"
 }
+
+
+pitch_types = st.multiselect(
+    "Select Pitch Types",
+    ["Four-Seam Fastball", "Sinker", "Slider", "Changeup", "Curveball", "Cutter", "Knuckle Curve", "Splitter"],
+    default=["Four-Seam Fastball", "Slider"]
+)
+
 
 # get pitcher data
 def get_pitcher_data(player_name, start_date, end_date):
