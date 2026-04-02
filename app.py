@@ -20,8 +20,14 @@ with col3:
     end_date = st.date_input("End Date", pd.to_datetime("2024-09-30"))
 
 col4, col5 = st.columns(2)
+
+# can change the rolling average time frame
+
 with col4:
     rolling_window = st.slider("Rolling Average Window (games)", 3, 10, 5)
+
+# creates a risk threshold of how much velo dropped by over time frame
+
 with col5:
     risk_threshold = st.slider("Risk Flag Threshold (mph drop)", 0.5, 3.0, 1.5, step=0.1)
 
