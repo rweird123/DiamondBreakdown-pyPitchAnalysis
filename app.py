@@ -19,10 +19,10 @@ with col1:
     )
 
 with col2:
-    start_date = st.date_input("Start Date", pd.to_datetime("2024-04-01"))
+    start_date = st.date_input("Start Date", pd.to_datetime("2025-03-20"))
 
 with col3:
-    end_date = st.date_input("End Date", pd.to_datetime("2024-09-30"))
+    end_date = st.date_input("End Date", pd.to_datetime("2025-11-30"))
 
 col4, col5 = st.columns(2)
 
