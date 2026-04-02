@@ -15,9 +15,18 @@ with col1:
     player_name = st.text_input("Pitcher Name", "Gerrit Cole",
                                 help="Use 'First Last' format (e.g. Justin Steele)")
 with col2:
-    start_date = st.date_input("Start Date", pd.to_datetime("2024-04-01"))
+    season_year = st.selectbox(
+        "Season",
+        [2024, 2023, 2022, 2021, 2020],
+        index=0,
+        help="Select MLB season"
+    )
 with col3:
-    end_date = st.date_input("End Date", pd.to_datetime("2024-09-30"))
+    st.markdown(f"**Season Range:** {season_year}")
+
+# Define season boundaries (regular season)
+start_date = pd.to_datetime(f"{season_year}-03-20")
+end_date = pd.to_datetime(f"{season_year}-10-01")
 
 col4, col5 = st.columns(2)
 
@@ -91,8 +100,6 @@ if st.button("Generate Dashboard", type="primary"):
         st.stop()
 
     pitcher_df["game_date"] = pd.to_datetime(pitcher_df["game_date"])
-    full_dates = pd.date_range(start=start_date, end=end_date)
-    full_df = pd.DataFrame({"game_date": full_dates})
 
     fig, ax = plt.subplots(figsize=(14, 6))
     fig.patch.set_facecolor("#0e1117")
@@ -115,10 +122,12 @@ if st.button("Generate Dashboard", type="primary"):
 
         # Per-game average
         game_avg = pitch_df.groupby("game_date")["velo"].mean().reset_index()
-        game_avg = pd.merge(full_df, game_avg, on="game_date", how="left")
-        game_avg["velo_interp"] = game_avg["velo"].interpolate()
+
+        # Only use real game days (no interpolation across offseason)
+        game_avg = game_avg.sort_values("game_date")
+
         game_avg["velo_rolling"] = (
-            game_avg["velo_interp"]
+            game_avg["velo"]
             .rolling(rolling_window, min_periods=1)
             .mean()
         )
@@ -194,7 +203,7 @@ if st.button("Generate Dashboard", type="primary"):
 
     # chart styling to look tuff
 
-    ax.set_title(f"{player_name} — Velocity Trends", color="white", fontsize=14, pad=12)
+    ax.set_title(f"{player_name} — {season_year} Season Velocity Trends", color="white", fontsize=14, pad=12)
     ax.set_xlabel("Date", color="#aaaaaa")
     ax.set_ylabel("Velocity (mph)", color="#aaaaaa")
     ax.tick_params(colors="#aaaaaa")
