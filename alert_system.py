@@ -37,11 +37,11 @@ WATCHLIST = [
     # Add more pitchers here — same format
 ]
 
-ROLLING_WINDOW   = 5      # games
-RISK_THRESHOLD   = 1.5    # mph below baseline to trigger alert
-LOOKBACK_DAYS    = 30     # how far back to pull recent data
-SEASON_START     = "2025-03-27"  # update each year
-DASHBOARD_URL    = "https://diamondbreakdown-pypitchanalysis-gha4m6jdzzuuqovwifc8zg.streamlit.app/"
+ROLLING_WINDOW   = 3      # games
+RISK_THRESHOLD   = 1    # mph below baseline to trigger alert
+LOOKBACK_DAYS    = 200     # how far back to pull recent data
+SEASON_START     = "2024-03-26"  # update each year
+DASHBOARD_URL    = "https://diamondbreakdown-pypitchanalysis.streamlit.app/"
 ALERT_LOG        = "alert_log.json"  # tracks already-sent alerts to avoid duplicates
 
 # ── HELPERS ───────────────────────────────────────────────────────────────────
