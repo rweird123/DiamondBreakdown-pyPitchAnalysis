@@ -35,3 +35,5 @@ https://jupyter.org/ - notebook used to configure and display data
 Jupyter can support a variety of coding languages. I have chosen to use Python as it is the language I am most familiar with. Jupyter can create graphs, plots, and other displays, which are easily sharable and exportable to google sheets. 
 
 Visual studio code - development environment 
+
+I used Anthropic's Sonnet 4.6 generative AI model to generate, debug, and optimize the code. 
