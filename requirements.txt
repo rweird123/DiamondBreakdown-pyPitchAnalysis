@@ -1,6 +1,6 @@
-streamlit
 pybaseball
 pandas
 matplotlib
-lxml
-requests
+streamlit
+tweepy
+twilio
