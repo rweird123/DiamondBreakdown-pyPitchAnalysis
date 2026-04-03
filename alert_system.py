@@ -32,6 +32,8 @@ from pybaseball import statcast_pitcher, playerid_lookup
 WATCHLIST = [
     {"name": "Justin Steele",  "pitch_type": "FF"},
     {"name": "Gerrit Cole",    "pitch_type": "FF"},
+    {"name": "Paul Skenes",  "pitch_type": "FF"},
+    {"name": "George Kirby",    "pitch_type": "FF"},
     # Add more pitchers here — same format
 ]
 
