@@ -23,7 +23,7 @@ import json
 from datetime import datetime, timedelta
 
 import pandas as pd
-import tweepy
+# import tweepy  # disabled — tweeting turned off
 from twilio.rest import Client
 from pybaseball import statcast_pitcher, playerid_lookup
 
@@ -102,15 +102,15 @@ def compute_rolling_avg(df: pd.DataFrame, pitch_type: str, window: int):
 
 # ── ALERTS ────────────────────────────────────────────────────────────────────
 
-def send_tweet(message: str):
-    client = tweepy.Client(
-        consumer_key=os.environ["TWITTER_API_KEY"],
-        consumer_secret=os.environ["TWITTER_API_SECRET"],
-        access_token=os.environ["TWITTER_ACCESS_TOKEN"],
-        access_token_secret=os.environ["TWITTER_ACCESS_SECRET"],
-    )
-    response = client.create_tweet(text=message)
-    print(f"  ✅ Tweet sent (id: {response.data['id']})")
+# def send_tweet(message: str):  # disabled — tweeting turned off
+#     client = tweepy.Client(
+#         consumer_key=os.environ["TWITTER_API_KEY"],
+#         consumer_secret=os.environ["TWITTER_API_SECRET"],
+#         access_token=os.environ["TWITTER_ACCESS_TOKEN"],
+#         access_token_secret=os.environ["TWITTER_ACCESS_SECRET"],
+#     )
+#     response = client.create_tweet(text=message)
+#     print(f"  ✅ Tweet sent (id: {response.data['id']})")
 
 
 def send_text(message: str):
@@ -126,26 +126,25 @@ def send_text(message: str):
     print(f"  ✅ Text sent (sid: {msg.sid})")
 
 
-def build_tweet(pitcher_name: str, pitch_type: str, rolling: float,
-                baseline: float, drop: float) -> str:
-    pitch_labels = {
-        "FF": "4-seam fastball", "SI": "sinker", "SL": "slider",
-        "CH": "changeup", "CU": "curveball", "FC": "cutter",
-    }
-    pitch_label = pitch_labels.get(pitch_type, pitch_type)
-
-    tweet = (
-        f"⚠️ VELOCITY ALERT — {pitcher_name}'s {pitch_label} is sitting "
-        f"{rolling:.1f} mph ({drop:.1f} mph below season baseline of {baseline:.1f} mph) "
-        f"over the last {ROLLING_WINDOW} outings.\n\n"
-        f"Injury risk flag raised 🚩\n\n"
-        f"📊 {DASHBOARD_URL}\n\n"
-        f"#MLB #Statcast #DiamondBreakdown"
-    )
-    # Twitter limit is 280 chars — truncate gracefully if needed
-    if len(tweet) > 280:
-        tweet = tweet[:277] + "..."
-    return tweet
+# def build_tweet(pitcher_name: str, pitch_type: str, rolling: float,  # disabled — tweeting turned off
+#                 baseline: float, drop: float) -> str:
+#     pitch_labels = {
+#         "FF": "4-seam fastball", "SI": "sinker", "SL": "slider",
+#         "CH": "changeup", "CU": "curveball", "FC": "cutter",
+#     }
+#     pitch_label = pitch_labels.get(pitch_type, pitch_type)
+#
+#     tweet = (
+#         f"⚠️ VELOCITY ALERT — {pitcher_name}'s {pitch_label} is sitting "
+#         f"{rolling:.1f} mph ({drop:.1f} mph below season baseline of {baseline:.1f} mph) "
+#         f"over the last {ROLLING_WINDOW} outings.\n\n"
+#         f"Injury risk flag raised 🚩\n\n"
+#         f"📊 {DASHBOARD_URL}\n\n"
+#         f"#MLB #Statcast #DiamondBreakdown"
+#     )
+#     if len(tweet) > 280:
+#         tweet = tweet[:277] + "..."
+#     return tweet
 
 
 def build_text(pitcher_name: str, pitch_type: str, rolling: float,
@@ -204,11 +203,11 @@ def main():
                 print(f"  ℹ Already alerted this week, skipping duplicate.\n")
                 continue
 
-            print(f"  🚨 ALERT TRIGGERED — sending tweet + text...")
-            tweet_text = build_tweet(name, pitch_type, latest_rolling, season_baseline, drop)
+            print(f"  🚨 ALERT TRIGGERED — sending text...")
+            # tweet_text = build_tweet(name, pitch_type, latest_rolling, season_baseline, drop)  # disabled
             text_body  = build_text(name, pitch_type, latest_rolling, season_baseline, drop)
 
-            send_tweet(tweet_text)
+            # send_tweet(tweet_text)  # disabled — tweeting turned off
             send_text(text_body)
 
             mark_alerted(alert_log, name, week_str)
@@ -221,7 +220,7 @@ def main():
     if not any_alerts:
         print("\n✅ No alerts fired today.")
     else:
-        print("\n🚨 Alerts sent. Check your Twitter and phone.")
+        print("\n🚨 Alert sent. Check your phone.")
 
 
 if __name__ == "__main__":
