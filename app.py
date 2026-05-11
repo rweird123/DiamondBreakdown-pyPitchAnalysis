@@ -14,7 +14,7 @@ col1, col2, col3 = st.columns(3)
 with col1:
     player_name = st.text_input(
         "Pitcher Name",
-        "Gerrit Cole",
+        "Name Here",
         help="Use 'First Last' format (e.g. Justin Steele)"
     )
 
