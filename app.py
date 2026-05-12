@@ -135,7 +135,8 @@ Do not use bullet points — write in flowing prose like a real scouting report.
              headers={
                 "Content-Type": "application/json",
                 "x-api-key": st.secrets["ANTHROPIC_API_KEY"],
-                "anthropic-version": "2023-06-01",        json={
+                "anthropic-version": "2023-06-01",        
+             json={
                 "model": "claude-sonnet-4-20250514",
                 "max_tokens": 1000,
                 "messages": [{"role": "user", "content": prompt}],
