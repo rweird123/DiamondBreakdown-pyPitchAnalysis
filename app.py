@@ -131,20 +131,22 @@ Do not use bullet points — write in flowing prose like a real scouting report.
 
     try:
         resp = requests.post(
-            "https://api.anthropic.com/v1/messages",
-             headers={
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
                 "Content-Type": "application/json",
-                "x-api-key": st.secrets["ANTHROPIC_API_KEY"],
-                "anthropic-version": "2023-06-01",        
-             json={
-                "model": "claude-sonnet-4-20250514",
+                "Authorization": f"Bearer {st.secrets['GROQ_API_KEY']}",
+            },
+            json={
+                "model": "llama-3.3-70b-versatile",
                 "max_tokens": 1000,
                 "messages": [{"role": "user", "content": prompt}],
             },
             timeout=30,
         )
         data = resp.json()
-        return data["content"][0]["text"]
+        if "error" in data:
+            return f"API Error: {data['error']['message']}"
+        return data["choices"][0]["message"]["content"]
     except Exception as e:
         return f"AI summary unavailable: {e}"
 
