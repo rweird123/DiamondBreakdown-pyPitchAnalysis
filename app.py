@@ -232,8 +232,120 @@ def get_pitcher_data(name: str, start: str, end: str):
     data = statcast_pitcher(start, end, pid)
     return data, pid
 
+# ── IL / Injury History ──────────────────────────────────────────────────────
+@st.cache_data(show_spinner=False)
+def get_il_stints(mlbam_id: int, start_date: str, end_date: str) -> list:
+    """Fetch IL transactions for a player from the free MLB Stats API.
+    Returns a list of dicts: {start, end, description, il_type}
+    where start/end are pd.Timestamp objects.
+    Pairs each 'placed on IL' with its subsequent 'activated from IL'.
+    """
+    try:
+        resp = requests.get(
+            "https://statsapi.mlb.com/api/v1/transactions",
+            params={"playerId": mlbam_id, "startDate": start_date, "endDate": end_date},
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return []
+        transactions = resp.json().get("transactions", [])
+    except Exception:
+        return []
+
+    # Filter to IL-related moves only
+    il_keywords = ["injured list", "il", "disabled list", "dl"]
+    il_txns = []
+    for t in transactions:
+        desc = (t.get("description") or "").lower()
+        type_desc = (t.get("typeDesc") or "").lower()
+        if any(k in desc or k in type_desc for k in il_keywords):
+            il_txns.append({
+                "date":        pd.to_datetime(t.get("date") or t.get("effectiveDate")),
+                "description": t.get("description") or "",
+                "type_desc":   t.get("typeDesc") or "",
+            })
+
+    il_txns.sort(key=lambda x: x["date"])
+
+    # Pair placements with activations
+    stints = []
+    placement = None
+    for txn in il_txns:
+        desc_lower = txn["description"].lower()
+        type_lower = txn["type_desc"].lower()
+        is_placed    = "placed" in desc_lower or "transferred" in desc_lower
+        is_activated = "activated" in desc_lower or "reinstated" in desc_lower
+
+        if is_placed and placement is None:
+            # Extract IL type (10-day, 15-day, 60-day)
+            il_type = "IL"
+            for marker in ["60-day", "15-day", "10-day"]:
+                if marker in desc_lower:
+                    il_type = marker.upper()
+                    break
+            placement = {"start": txn["date"], "description": txn["description"], "il_type": il_type}
+
+        elif is_activated and placement is not None:
+            stints.append({
+                "start":       placement["start"],
+                "end":         txn["date"],
+                "description": placement["description"],
+                "il_type":     placement["il_type"],
+            })
+            placement = None
+
+    # If still on IL (no activation found), mark end as today
+    if placement is not None:
+        stints.append({
+            "start":       placement["start"],
+            "end":         pd.Timestamp(_dt.date.today()),
+            "description": placement["description"],
+            "il_type":     placement["il_type"],
+            "active":      True,
+        })
+
+    return stints
+
+
+def draw_il_stints(ax, il_stints: list, y_min: float, y_max: float):
+    """Overlay IL stint shading + labels on a velocity chart axes."""
+    if not il_stints:
+        return
+    for stint in il_stints:
+        # Shaded band
+        ax.axvspan(
+            stint["start"], stint["end"],
+            color="#FF6B00", alpha=0.12, zorder=1,
+        )
+        # Top label
+        mid = stint["start"] + (stint["end"] - stint["start"]) / 2
+        # Extract short injury description — strip the boilerplate
+        desc = stint["description"]
+        for strip in ["placed on the 10-day injured list", "placed on the 15-day injured list",
+                      "placed on the 60-day injured list", "Placed On The 10-Day Injured List",
+                      "Placed On The 15-Day Injured List", "Placed On The 60-Day Injured List",
+                      "retroactive to", "Retroactive To"]:
+            desc = desc.replace(strip, "").strip(" .,;")
+        # Clean up leading "with" 
+        if desc.lower().startswith("with "):
+            desc = desc[5:]
+        short_desc = (desc[:28] + "…") if len(desc) > 30 else desc
+        label = f"{stint['il_type']}: {short_desc}" if short_desc else stint["il_type"]
+
+        ax.text(
+            mid, y_max * 0.995,
+            label,
+            color="#FF6B00", fontsize=6.5, ha="center", va="top",
+            rotation=0, style="italic",
+            bbox=dict(boxstyle="round,pad=0.2", facecolor=DARK_BG, alpha=0.7, edgecolor="none"),
+        )
+        # Vertical boundary lines
+        ax.axvline(stint["start"], color="#FF6B00", linewidth=0.8, alpha=0.5, linestyle="--")
+        ax.axvline(stint["end"],   color="#FF6B00", linewidth=0.8, alpha=0.5, linestyle="--")
+
+
 # ── AI Risk Summary ───────────────────────────────────────────────────────────
-def generate_ai_summary(pitcher_name: str, risk_lines: list, baseline_info: dict, pitch_stats: dict) -> str:
+def generate_ai_summary(pitcher_name: str, risk_lines: list, baseline_info: dict, pitch_stats: dict, il_stints: list = None) -> str:
     stats_text = "\n".join([
         f"- {p}: avg velo {v['velo']:.1f} mph, avg spin {v['spin']:.0f} rpm, "
         f"H-break {v['hbreak']:.1f} in, V-break {v['vbreak']:.1f} in"
@@ -241,6 +353,16 @@ def generate_ai_summary(pitcher_name: str, risk_lines: list, baseline_info: dict
     ])
     risk_text = "\n".join(risk_lines) if risk_lines else "No risk zones flagged."
     baseline_text = "\n".join([f"- {p}: {b:.1f} mph baseline" for p, b in baseline_info.items()])
+
+    il_text = "No IL stints in this period."
+    if il_stints:
+        il_lines = []
+        for s in il_stints:
+            start_str = pd.Timestamp(s["start"]).strftime("%b %d")
+            end_str   = pd.Timestamp(s["end"]).strftime("%b %d")
+            active    = " (currently on IL)" if s.get("active") else ""
+            il_lines.append(f"  - {s['il_type']}: {start_str} to {end_str}{active} — {s['description'][:80]}")
+        il_text = "\n".join(il_lines)
 
     prompt = f"""You are a baseball analytics scout writing a concise injury risk assessment for {pitcher_name}.
 
@@ -253,9 +375,12 @@ Pitch statistics:
 Risk zones detected:
 {risk_text}
 
-Write a 3–4 sentence scouting-style injury risk summary. Be direct, analytical, and specific. 
-Mention actual numbers. Flag any concerning patterns. If no risk zones were found, note that the pitcher 
-looks healthy and consistent. End with a one-sentence overall risk verdict (Low / Moderate / High risk).
+IL / Injured List history:
+{il_text}
+
+Write a 3–4 sentence scouting-style injury risk summary. Be direct, analytical, and specific.
+Mention actual numbers. Reference IL stints if present and note any velocity changes before/after.
+If no risk zones or IL stints, note the pitcher looks healthy. End with a one-sentence overall risk verdict (Low / Moderate / High risk).
 Do not use bullet points — write in flowing prose like a real scouting report."""
 
     try:
@@ -353,13 +478,21 @@ def build_velo_chart(pitcher_df, player_name, start_date, end_date, selected_pit
     ax.set_xlabel("Date"); ax.set_ylabel("Velocity (mph)")
 
     handles, _ = ax.get_legend_handles_labels()
-    red_patch   = mpatches.Patch(color="red", alpha=0.4, label=f"Risk zone (≥{risk_threshold} mph drop)")
-    ax.legend(handles=handles + [red_patch], facecolor="#1a1a2e", edgecolor=AXIS_CLR,
+    red_patch = mpatches.Patch(color="red", alpha=0.4, label=f"Risk zone (≥{risk_threshold} mph drop)")
+    il_patch  = mpatches.Patch(color="#FF6B00", alpha=0.4, label="IL stint")
+    ax.legend(handles=handles + [red_patch, il_patch], facecolor="#1a1a2e", edgecolor=AXIS_CLR,
               labelcolor="white", fontsize=7)
 
+    # Overlay IL stints if player_id provided
+    il_stints = []
+    if player_id is not None:
+        il_stints = get_il_stints(int(player_id), str(start_date), str(end_date))
+        y_min, y_max = ax.get_ylim()
+        draw_il_stints(ax, il_stints, y_min, y_max)
+
     if standalone:
-        return fig, risk_report, baseline_info, pitch_stats
-    return risk_report, baseline_info, pitch_stats
+        return fig, risk_report, baseline_info, pitch_stats, il_stints
+    return risk_report, baseline_info, pitch_stats, il_stints
 
 # ── Advanced Analytics Chart ──────────────────────────────────────────────────
 def build_analytics_charts(pitcher_df, player_name, selected_pitches):
@@ -531,7 +664,7 @@ if st.button("⚡ Generate Dashboard", type="primary"):
     # ── Fetch pitcher 2 (compare mode) ───────────────────────────────────────
     if compare_mode:
         with st.spinner(f"Loading {player_name2}..."):
-            pitcher_df2, _ = get_pitcher_data(player_name2, str(start_date), str(end_date))
+            pitcher_df2, player_id2 = get_pitcher_data(player_name2, str(start_date), str(end_date))
         if pitcher_df2 is None or pitcher_df2.empty:
             st.error(f"Couldn't find data for **{player_name2}**. Check spelling.")
             st.stop()
@@ -568,9 +701,10 @@ if st.button("⚡ Generate Dashboard", type="primary"):
             # Single pitcher velocity tab
             show_summary_metrics(pitcher_df, selected_pitches)
             st.divider()
-            velo_fig, risk_report, baseline_info, pitch_stats = build_velo_chart(
+            velo_fig, risk_report, baseline_info, pitch_stats, il_stints = build_velo_chart(
                 pitcher_df, player_name, start_date, end_date,
                 selected_pitches, rolling_window, risk_threshold,
+                player_id=player_id,
             )
             st.pyplot(velo_fig)
 
@@ -608,24 +742,26 @@ if st.button("⚡ Generate Dashboard", type="primary"):
             st.info("Enable the AI toggle above to generate this report.")
         else:
             # Build context for AI (always from P1; comparison gives both)
-            _, risk_report_ai, baseline_info_ai, pitch_stats_ai = build_velo_chart(
+            _, risk_report_ai, baseline_info_ai, pitch_stats_ai, il_stints_ai = build_velo_chart(
                 pitcher_df, player_name, start_date, end_date,
                 selected_pitches, rolling_window, risk_threshold,
+                player_id=player_id,
             )
 
             with st.spinner("Generating scouting report..."):
-                summary = generate_ai_summary(player_name, risk_report_ai, baseline_info_ai, pitch_stats_ai)
+                summary = generate_ai_summary(player_name, risk_report_ai, baseline_info_ai, pitch_stats_ai, il_stints_ai)
 
             st.markdown(f'<div class="section-label">Scouting Report — {player_name}</div>', unsafe_allow_html=True)
             st.markdown(f'<div class="ai-box">{summary}</div>', unsafe_allow_html=True)
 
             if compare_mode:
-                _, risk_report_ai2, baseline_info_ai2, pitch_stats_ai2 = build_velo_chart(
+                _, risk_report_ai2, baseline_info_ai2, pitch_stats_ai2, il_stints_ai2 = build_velo_chart(
                     pitcher_df2, player_name2, start_date, end_date,
                     selected_pitches, rolling_window, risk_threshold,
+                    player_id=player_id2,
                 )
                 with st.spinner(f"Generating report for {player_name2}..."):
-                    summary2 = generate_ai_summary(player_name2, risk_report_ai2, baseline_info_ai2, pitch_stats_ai2)
+                    summary2 = generate_ai_summary(player_name2, risk_report_ai2, baseline_info_ai2, pitch_stats_ai2, il_stints_ai2)
 
                 st.divider()
                 st.markdown(f'<div class="section-label">Scouting Report — {player_name2}</div>', unsafe_allow_html=True)
