@@ -406,7 +406,7 @@ Do not use bullet points — write in flowing prose like a real scouting report.
 
 # ── Velocity Chart (single or comparison) ────────────────────────────────────
 def build_velo_chart(pitcher_df, player_name, start_date, end_date, selected_pitches,
-                     rolling_window, risk_threshold, color_offset=0, ax=None):
+                     rolling_window, risk_threshold, color_offset=0, ax=None, player_id=None):
     full_df = pd.DataFrame({"game_date": pd.date_range(start=start_date, end=end_date)})
     risk_report  = []
     baseline_info = {}
