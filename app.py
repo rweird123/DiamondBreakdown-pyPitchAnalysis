@@ -69,6 +69,56 @@ GRID_CLR  = "#1e2533"
 TEXT_CLR  = "#c9d1d9"
 AXIS_CLR  = "#4a5568"
 
+# ── MLB Season Schedule ───────────────────────────────────────────────────────
+import datetime as _dt
+_TODAY = _dt.date.today()
+
+def _cap(d):
+    return min(d, _TODAY)
+
+MLB_SEASONS = {
+    2021: {
+        "Spring Training": ("2021-02-28", _cap(_dt.date(2021,  4,  1))),
+        "Regular Season":  ("2021-04-01", _cap(_dt.date(2021, 10,  3))),
+        "Postseason":      ("2021-10-05", _cap(_dt.date(2021, 11,  2))),
+    },
+    2022: {
+        "Spring Training": ("2022-03-18", _cap(_dt.date(2022,  4,  7))),
+        "Regular Season":  ("2022-04-07", _cap(_dt.date(2022, 10,  5))),
+        "Postseason":      ("2022-10-07", _cap(_dt.date(2022, 11,  5))),
+    },
+    2023: {
+        "Spring Training": ("2023-02-25", _cap(_dt.date(2023,  3, 30))),
+        "Regular Season":  ("2023-03-30", _cap(_dt.date(2023, 10,  1))),
+        "Postseason":      ("2023-10-03", _cap(_dt.date(2023, 11,  1))),
+    },
+    2024: {
+        "Spring Training": ("2024-02-22", _cap(_dt.date(2024,  3, 28))),
+        "Regular Season":  ("2024-03-20", _cap(_dt.date(2024,  9, 29))),
+        "Postseason":      ("2024-10-01", _cap(_dt.date(2024, 10, 30))),
+    },
+    2025: {
+        "Spring Training": ("2025-02-20", _cap(_dt.date(2025,  3, 27))),
+        "Regular Season":  ("2025-03-27", _cap(_dt.date(2025,  9, 28))),
+        "Postseason":      ("2025-10-01", _cap(_dt.date(2025, 10, 29))),
+    },
+    2026: {
+        "Spring Training": ("2026-02-19", _cap(_dt.date(2026,  3, 26))),
+        "Regular Season":  ("2026-03-26", _cap(_dt.date(2026,  9, 27))),
+        "Postseason":      ("2026-10-01", _cap(_dt.date(2026, 10, 28))),
+    },
+}
+
+def get_valid_periods(season: int) -> dict:
+    """Return only periods whose end date has data (i.e. start <= today)."""
+    periods = {}
+    for name, (start, end) in MLB_SEASONS[season].items():
+        start_d = _dt.date.fromisoformat(start)
+        end_d   = end if isinstance(end, _dt.date) else _dt.date.fromisoformat(str(end))
+        if start_d <= _TODAY:
+            periods[name] = (start, str(end_d))
+    return periods
+
 def apply_dark_style(ax):
     ax.set_facecolor(PANEL_BG)
     ax.tick_params(colors=TEXT_CLR, labelsize=8)
