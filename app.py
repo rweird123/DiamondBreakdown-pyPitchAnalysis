@@ -9,6 +9,27 @@ import requests
 
 st.set_page_config(page_title="Diamond Breakdown | Pitcher Analytics", layout="wide")
 
+# ── Pitcher Roster (autocomplete source) ─────────────────────────────────────
+@st.cache_data(show_spinner="Loading pitcher roster...")
+def load_pitcher_roster():
+    """Pull the full pybaseball people table and return a sorted list of
+    'First Last' strings for every player who has a known MLB pitching role.
+    Falls back to an empty list if the network call fails."""
+    try:
+        from pybaseball import chadwick_register
+        people = chadwick_register(save=False)
+        # keep rows that have a usable name
+        people = people.dropna(subset=["name_first", "name_last", "key_mlbam"])
+        people["full_name"] = (
+            people["name_first"].str.strip().str.title()
+            + " "
+            + people["name_last"].str.strip().str.title()
+        )
+        names = sorted(people["full_name"].dropna().unique().tolist())
+        return names
+    except Exception:
+        return []
+
 # ── Custom CSS ──────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -60,6 +81,31 @@ def apply_dark_style(ax):
     ax.yaxis.label.set_color(TEXT_CLR)
     ax.title.set_color("white")
 
+# ── Pitcher Roster Load ───────────────────────────────────────────────────────
+pitcher_roster = load_pitcher_roster()
+# Ensure a handful of popular names are always present even if roster fails
+_fallbacks = [
+    "Corbin Burnes", "Gerrit Cole", "Zack Wheeler", "Spencer Strider",
+    "Logan Webb", "Tarik Skubal", "Hunter Brown", "Freddy Peralta",
+    "Chris Sale", "Kevin Gausman", "Luis Castillo", "Max Fried",
+    "Framber Valdez", "Dylan Cease", "Sandy Alcantara", "Blake Snell",
+    "Justin Verlander", "Clayton Kershaw", "Tyler Glasnow", "Justin Steele",
+]
+if not pitcher_roster:
+    pitcher_roster = sorted(_fallbacks)
+else:
+    # merge fallbacks in case they're missing
+    pitcher_set = set(pitcher_roster)
+    for f in _fallbacks:
+        if f not in pitcher_set:
+            pitcher_roster.append(f)
+    pitcher_roster = sorted(pitcher_roster)
+
+def pitcher_selectbox(label, default, key):
+    idx = pitcher_roster.index(default) if default in pitcher_roster else 0
+    return st.selectbox(label, pitcher_roster, index=idx, key=key,
+                        help="Start typing to search")
+
 # ── Mode Toggle ──────────────────────────────────────────────────────────────
 mode = st.radio("Mode", ["Single Pitcher", "Compare Two Pitchers"], horizontal=True)
 compare_mode = mode == "Compare Two Pitchers"
@@ -67,15 +113,15 @@ compare_mode = mode == "Compare Two Pitchers"
 # ── Inputs ───────────────────────────────────────────────────────────────────
 if compare_mode:
     c1, c2, c3, c4 = st.columns(4)
-    with c1: player_name  = st.text_input("Pitcher 1", "Corbin Burnes")
-    with c2: player_name2 = st.text_input("Pitcher 2", "Gerrit Cole")
+    with c1: player_name  = pitcher_selectbox("Pitcher 1", "Corbin Burnes", "p1")
+    with c2: player_name2 = pitcher_selectbox("Pitcher 2", "Gerrit Cole",   "p2")
     with c3: start_date   = st.date_input("Start Date", pd.to_datetime("2025-03-20"))
     with c4: end_date     = st.date_input("End Date",   pd.to_datetime("2025-11-30"))
 else:
     c1, c2, c3 = st.columns(3)
-    with c1: player_name = st.text_input("Pitcher Name", "Corbin Burnes", help="First Last format")
-    with c2: start_date  = st.date_input("Start Date",   pd.to_datetime("2025-03-20"))
-    with c3: end_date    = st.date_input("End Date",     pd.to_datetime("2025-11-30"))
+    with c1: player_name = pitcher_selectbox("Pitcher Name", "Corbin Burnes", "p1")
+    with c2: start_date  = st.date_input("Start Date", pd.to_datetime("2025-03-20"))
+    with c3: end_date    = st.date_input("End Date",   pd.to_datetime("2025-11-30"))
 
 c4, c5 = st.columns(2)
 with c4: rolling_window  = st.slider("Rolling Average Window (games)", 3, 10, 5)
@@ -99,6 +145,9 @@ def get_pitcher_data(name: str, start: str, end: str):
     lookup = playerid_lookup(last, first)
     if lookup.empty:
         return None, None
+    # If multiple rows, prefer the one with the most recent mlb activity
+    if len(lookup) > 1 and "mlb_played_last" in lookup.columns:
+        lookup = lookup.sort_values("mlb_played_last", ascending=False)
     pid  = lookup["key_mlbam"].iloc[0]
     data = statcast_pitcher(start, end, pid)
     return data, pid
