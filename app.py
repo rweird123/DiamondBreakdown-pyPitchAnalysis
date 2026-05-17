@@ -441,9 +441,11 @@ def build_velo_chart(pitcher_df, player_name, start_date, end_date, selected_pit
             "vbreak": vbreak if not np.isnan(vbreak) else 0,
         }
 
+        pitch_df["game_date"] = pd.to_datetime(pitch_df["game_date"])
         game_avg = pitch_df.groupby("game_date")["velo"].mean().reset_index()
         game_avg = pd.merge(full_df, game_avg, on="game_date", how="left")
-        game_avg["velo_interp"] = game_avg["velo"].interpolate()
+        # Smart gap fill: interpolate short rests only, break on long absences
+        game_avg["velo_interp"] = smart_interpolate(game_avg["velo"], max_gap=5)
         game_avg["velo_rolling"] = game_avg["velo_interp"].rolling(rolling_window, min_periods=1).mean()
 
         color           = COLORS[(i + color_offset) % len(COLORS)]
