@@ -119,6 +119,18 @@ def get_valid_periods(season: int) -> dict:
             periods[name] = (start, str(end_d))
     return periods
 
+def smart_interpolate(series, max_gap=5):
+    """Fill NaN runs of length <= max_gap with linear interpolation.
+    Longer gaps stay NaN so matplotlib breaks the line naturally,
+    avoiding misleading segments across IL stints or off-months."""
+    is_gap   = series.isna()
+    groups   = (is_gap != is_gap.shift()).cumsum()
+    run_lens = is_gap.groupby(groups).transform("sum")
+    result   = series.copy().astype(float)
+    short    = is_gap & (run_lens <= max_gap)
+    result[short] = series.interpolate(method="linear")[short]
+    return result
+
 def apply_dark_style(ax):
     ax.set_facecolor(PANEL_BG)
     ax.tick_params(colors=TEXT_CLR, labelsize=8)
