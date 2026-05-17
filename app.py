@@ -110,18 +110,48 @@ def pitcher_selectbox(label, default, key):
 mode = st.radio("Mode", ["Single Pitcher", "Compare Two Pitchers"], horizontal=True)
 compare_mode = mode == "Compare Two Pitchers"
 
+# ── Season / Period Picker ────────────────────────────────────────────────────
+st.markdown("**Select Season & Period**")
+_season_col, _period_col = st.columns(2)
+
+with _season_col:
+    selected_season = st.selectbox(
+        "Season",
+        options=sorted(MLB_SEASONS.keys(), reverse=True),
+        index=0,
+        key="season_pick",
+    )
+
+_valid_periods = get_valid_periods(selected_season)
+
+if not _valid_periods:
+    st.warning("No data available yet for that season.")
+    st.stop()
+
+with _period_col:
+    selected_period = st.selectbox(
+        "Period",
+        options=list(_valid_periods.keys()),
+        key="period_pick",
+    )
+
+start_date, end_date = _valid_periods[selected_period]
+start_date = pd.to_datetime(start_date).date()
+end_date   = pd.to_datetime(end_date).date()
+
+st.caption(
+    f"Date range: **{start_date.strftime('%b %d, %Y')}** to **{end_date.strftime('%b %d, %Y')}**"
+    + (" *(season in progress — data through today)*"
+       if end_date == _dt.date.today() else "")
+)
+
 # ── Inputs ───────────────────────────────────────────────────────────────────
 if compare_mode:
-    c1, c2, c3, c4 = st.columns(4)
+    c1, c2 = st.columns(2)
     with c1: player_name  = pitcher_selectbox("Pitcher 1", "Corbin Burnes", "p1")
     with c2: player_name2 = pitcher_selectbox("Pitcher 2", "Gerrit Cole",   "p2")
-    with c3: start_date   = st.date_input("Start Date", pd.to_datetime("2025-03-20"))
-    with c4: end_date     = st.date_input("End Date",   pd.to_datetime("2025-11-30"))
 else:
-    c1, c2, c3 = st.columns(3)
-    with c1: player_name = pitcher_selectbox("Pitcher Name", "Corbin Burnes", "p1")
-    with c2: start_date  = st.date_input("Start Date", pd.to_datetime("2025-03-20"))
-    with c3: end_date    = st.date_input("End Date",   pd.to_datetime("2025-11-30"))
+    player_name = pitcher_selectbox("Pitcher Name", "Corbin Burnes", "p1")
 
 c4, c5 = st.columns(2)
 with c4: rolling_window  = st.slider("Rolling Average Window (games)", 3, 10, 5)
