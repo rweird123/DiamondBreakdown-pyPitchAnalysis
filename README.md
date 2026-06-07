@@ -38,14 +38,14 @@ Longevity
 
 **Tools**
 
---> Pybaseball - python library pulling from baseball savant, baseball reference, and fangraphs. Baseball savant compiles MLB data using MLB Statcast. They develop advanced statistics beyond counting stats. Baseball reference provides a library for all MLB players and their stats. It includes all counting stats, playings, teams, and records. 
+- Pybaseball - python library pulling from baseball savant, baseball reference, and fangraphs. Baseball savant compiles MLB data using MLB Statcast. They develop advanced statistics beyond counting stats. Baseball reference provides a library for all MLB players and their stats. It includes all counting stats, playings, teams, and records. 
 
---> https://jupyter.org/ - notebook used to configure and display data
+- https://jupyter.org/ - notebook used to configure and display data
 Jupyter can support a variety of coding languages. I have chosen to use Python as it is the language I am most familiar with. Jupyter can create graphs, plots, and other displays, which are easily sharable and exportable to google sheets. 
 
---> Visual studio code - development environment 
+- Visual studio code - development environment 
 
---> Claude Sonnet 4.6 - Generative AI model owned by Anthropic, it can be used for daily tasks, complex problem solving, and code. I will use this to assist me in learning, writing, and debugging code. I will not explicitly copy full solutions from AI, but I will instead use it to explain errors, suggest improvements, and help me better understand how to use various software. I have very basic coding skills, and this project was not necessarily created to work on coding, but instead to focus on data analysis and MLB pitchers. 
+- Claude Sonnet 4.6 - Generative AI model owned by Anthropic, it can be used for daily tasks, complex problem solving, and code. I will use this to assist me in learning, writing, and debugging code. I will not explicitly copy full solutions from AI, but I will instead use it to explain errors, suggest improvements, and help me better understand how to use various software. I have very basic coding skills, and this project was not necessarily created to work on coding, but instead to focus on data analysis and MLB pitchers. 
 
 All of the writing on this document, as well as on my YouTube channel and the GitHub repository are fully created by myself, Rohan Shah. 
 
