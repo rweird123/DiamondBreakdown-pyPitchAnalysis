@@ -49,3 +49,8 @@ Jupyter can support a variety of coding languages. I have chosen to use Python a
 
 All of the writing on this document, as well as on my YouTube channel and the GitHub repository are fully created by myself, Rohan Shah. 
 
+## App - [Pitcher Intelligence Dashboard](https://diamondbreakdown-pypitchanalysis.streamlit.app/)
+
+A Streamlit web app created for analyzing MLB pitchers
+
+
