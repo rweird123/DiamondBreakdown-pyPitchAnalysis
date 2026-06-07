@@ -53,4 +53,12 @@ All of the writing on this document, as well as on my YouTube channel and the Gi
 
 A Streamlit web app created for analyzing MLB pitchers
 
-
+**Features**
+- Search any MLB pitcher by name (full league autocomplete)
+- View velocity trend charts with rolling averages and season baselines
+- Injury risk flagging - highlights games where velocity drops below a specified value
+- IL stint overlays on velocity trend charts pulled from the MLB Stats API
+- Advanced analytic charts: spin rate over time, horizontal/vertical break, pitch movement profiles, pitch usage
+- Side-by-side pitcher comparison mode
+- AI-generated scouting reports and injury risk identifier (Groq / Llama 3.3)
+- Season and period selection (Spring Training, Regular Season, Postseason)
